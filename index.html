@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Checkers</title>
+    <style>
+        body { background: #1c1c1c; color: white; text-align: center; font-family: sans-serif; }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 40px);
+            grid-template-rows: repeat(8, 40px);
+            gap: 0;
+            margin: 20px auto;
+            width: 320px;
+            border: 5px solid #333;
+        }
+        .cell { width: 40px; height: 40px; }
+        .black { background-color: #555; }
+        .white { background-color: #eee; }
+        .piece {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .red-p { background: red; box-shadow: 0 3px #900; }
+        .white-p { background: white; box-shadow: 0 3px #ccc; }
+    </style>
+</head>
+<body>
+    <h2>Шашки в Telegram</h2>
+    <div class="board" id="board"></div>
+
+    <script>
+        const boardElement = document.getElementById('board');
+        // Отрисовка доски 8x8
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell ' + ((row + col) % 2 === 0 ? 'white' : 'black');
+                
+                // Расставляем шашки на черные клетки (первые 3 ряда и последние 3)
+                if ((row + col) % 2 !== 0) {
+                    if (row < 3) {
+                        const p = document.createElement('div');
+                        p.className = 'piece red-p';
+                        cell.appendChild(p);
+                    } else if (row > 4) {
+                        const p = document.createElement('div');
+                        p.className = 'piece white-p';
+                        cell.appendChild(p);
+                    }
+                }
+                boardElement.appendChild(cell);
+            }
+        }
+    </script>
+</body>
+</html>
