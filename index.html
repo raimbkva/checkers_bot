@@ -3,69 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Checkers AI</title>
+    <title>Checkers Elite AI</title>
     <style>
-        body { background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        #menu { position: absolute; background: rgba(0,0,0,0.9); width: 100%; height: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .btn { background: #444; color: white; border: 1px solid #666; padding: 15px 30px; margin: 10px; cursor: pointer; border-radius: 8px; width: 200px; font-size: 16px; }
-        .btn:hover { background: #666; }
+        body { background: #1a1a1a; color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        #menu { position: absolute; background: rgba(0,0,0,0.95); width: 100%; height: 100%; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .btn { background: #444; color: white; border: 1px solid #666; padding: 15px; margin: 5px; cursor: pointer; border-radius: 8px; width: 220px; }
         .board { display: grid; grid-template-columns: repeat(8, 11vw); grid-template-rows: repeat(8, 11vw); border: 5px solid #333; }
-        .cell { width: 11vw; height: 11vw; display: flex; align-items: center; justify-content: center; position: relative; }
+        .cell { width: 11vw; height: 11vw; display: flex; align-items: center; justify-content: center; }
         .black-cell { background-color: #444; }
         .white-cell { background-color: #ccc; }
-        .piece { width: 80%; height: 80%; border-radius: 50%; cursor: pointer; transition: 0.2s; position: relative; z-index: 2; border: 2px solid rgba(0,0,0,0.2); }
+        .piece { width: 80%; height: 80%; border-radius: 50%; cursor: pointer; position: relative; transition: 0.2s; }
         .white-p { background: #eee; box-shadow: 0 4px #999; }
         .red-p { background: #f44; box-shadow: 0 4px #800; }
-        .king { border: 4px solid gold !important; }
-        .selected { transform: scale(1.1); outline: 3px solid #0f0; }
-        .highlight { background-color: rgba(0, 255, 0, 0.4) !important; }
+        /* Дамка: золотой ободок и корона */
+        .king::after { content: "👑"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 14px; }
+        .selected { transform: scale(1.1); outline: 3px solid #0f0; z-index: 10; }
+        .highlight { background-color: rgba(0, 255, 0, 0.4) !important; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="menu">
-    <h2>Настройки игры</h2>
-    <p>Выберите цвет:</p>
-    <button class="btn" onclick="startGame(2)">Я за Белых</button>
-    <button class="btn" onclick="startGame(1)">Я за Красных</button>
+    <h2>🏆 Турнир по Шашкам</h2>
+    <p>Выберите сторону:</p>
+    <button class="btn" onclick="startGame(2)">Играть за Белых</button>
+    <button class="btn" onclick="startGame(1)">Играть за Красных</button>
     <p>Сложность ИИ:</p>
-    <select id="diff" class="btn">
-        <option value="1">Легкий</option>
-        <option value="2">Средний</option>
-        <option value="3">Сложный</option>
-    </select>
+    <select id="diff" class="btn"><option value="1">Легкий</option><option value="2">Средний</option></select>
 </div>
 
-<h2 id="status">Ход Белых</h2>
+<h3 id="status">Ход Белых</h3>
 <div class="board" id="board"></div>
 
 <script>
     const boardEl = document.getElementById('board');
     const statusEl = document.getElementById('status');
-    let playerColor = 2; // 2-белые, 1-красные
-    let botColor = 1;
-    let difficulty = 1;
-    let gameState = [];
-    let selected = null;
-    let currentTurn = 2; 
+    let gameState = Array(8).fill().map(() => Array(8).fill(0));
+    let playerColor = 2, botColor = 1, currentTurn = 2, selected = null, mustEat = false;
 
     function startGame(color) {
-        playerColor = color;
-        botColor = color === 2 ? 1 : 2;
-        difficulty = parseInt(document.getElementById('diff').value);
+        playerColor = color; botColor = color === 2 ? 1 : 2;
         document.getElementById('menu').style.display = 'none';
         initBoard();
-        if (currentTurn === botColor) setTimeout(botMove, 600);
+        if(currentTurn === botColor) setTimeout(botMove, 800);
     }
 
     function initBoard() {
-        gameState = Array(8).fill().map(() => Array(8).fill(0));
-        for(let r=0; r<8; r++) {
-            for(let c=0; c<8; c++) {
-                if((r+c)%2 !== 0) {
-                    if(r < 3) gameState[r][c] = 1;
-                    if(r > 4) gameState[r][c] = 2;
-                }
+        for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
+            if((r+c)%2 !== 0) {
+                if(r < 3) gameState[r][c] = 1; // Красные
+                else if(r > 4) gameState[r][c] = 2; // Белые
             }
         }
         render();
@@ -73,132 +60,124 @@
 
     function render() {
         boardEl.innerHTML = '';
-        for(let r=0; r<8; r++) {
-            for(let c=0; c<8; c++) {
-                const cell = document.createElement('div');
-                cell.className = `cell ${(r+c)%2===0 ? 'white-cell' : 'black-cell'}`;
-                
-                if(gameState[r][c] !== 0) {
-                    const p = document.createElement('div');
-                    p.className = `piece ${gameState[r][c] === 1 ? 'red-p' : 'white-p'}`;
-                    if(selected && selected.r === r && selected.c === c) p.classList.add('selected');
-                    p.onclick = () => onPieceClick(r, c);
-                    cell.appendChild(p);
-                }
-
-                if(selected && getValidMoves(selected.r, selected.c).some(m => m.r === r && m.c === c)) {
-                    cell.classList.add('highlight');
-                    cell.onclick = () => makeMove(selected.r, selected.c, r, c);
-                }
-                boardEl.appendChild(cell);
+        let validMoves = selected ? getValidMoves(selected.r, selected.c) : [];
+        
+        for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
+            const cell = document.createElement('div');
+            cell.className = `cell ${(r+c)%2===0 ? 'white-cell' : 'black-cell'}`;
+            
+            if(gameState[r][c] !== 0) {
+                const p = document.createElement('div');
+                const val = gameState[r][c];
+                p.className = `piece ${Math.abs(val) === 1 ? 'red-p' : 'white-p'} ${val < 0 ? 'king' : ''}`;
+                if(selected && selected.r === r && selected.c === c) p.classList.add('selected');
+                p.onclick = () => { if(currentTurn === playerColor) { selected = {r, c}; render(); } };
+                cell.appendChild(p);
             }
-        }
-    }
 
-    function onPieceClick(r, c) {
-        if(currentTurn !== playerColor) return;
-        if(gameState[r][c] === playerColor) {
-            selected = {r, c};
-            render();
+            const move = validMoves.find(m => m.r === r && m.c === c);
+            if(move) {
+                cell.classList.add('highlight');
+                cell.onclick = () => makeMove(selected.r, selected.c, r, c);
+            }
+            boardEl.appendChild(cell);
         }
     }
 
     function getValidMoves(r, c) {
-        const moves = [];
         const piece = gameState[r][c];
-        const directions = piece === 2 ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]];
+        const isKing = piece < 0;
+        const color = Math.abs(piece);
+        const moves = [];
+
+        const dirs = isKing ? [[1,1],[1,-1],[-1,1],[-1,-1]] : (color === 2 ? [[-1,-1],[-1,1]] : [[1,-1],[1,1]]);
         
-        // Обычные ходы
-        directions.forEach(([dr, dc]) => {
-            const nr = r + dr, nc = c + dc;
-            if(nr>=0 && nr<8 && nc>=0 && nc<8 && gameState[nr][nc] === 0) {
-                moves.push({r: nr, c: nc, type: 'step'});
+        // Поиск прыжков (обязательно)
+        const jumpDirs = [[1,1],[1,-1],[-1,1],[-1,-1]];
+        jumpDirs.forEach(([dr, dc]) => {
+            let nr = r + dr, nc = c + dc;
+            if(isKing) { // Логика дамки (длинный прыжок)
+                while(nr>=0 && nr<8 && nc>=0 && nc<8) {
+                    if(gameState[nr][nc] !== 0) {
+                        if(Math.abs(gameState[nr][nc]) !== color) {
+                            let er = nr + dr, ec = nc + dc;
+                            if(er>=0 && er<8 && ec>=0 && ec<8 && gameState[er][ec] === 0) {
+                                moves.push({r: er, c: ec, type: 'jump', eat: {r: nr, c: nc}});
+                            }
+                        }
+                        break;
+                    }
+                    nr += dr; nc += dc;
+                }
+            } else { // Обычный прыжок
+                let er = r + dr*2, ec = c + dc*2;
+                if(er>=0 && er<8 && ec>=0 && ec<8 && gameState[er][ec] === 0) {
+                    let mid = gameState[r+dr][c+dc];
+                    if(mid !== 0 && Math.abs(mid) !== color) moves.push({r: er, c: ec, type: 'jump', eat: {r: r+dr, c: c+dc}});
+                }
             }
         });
 
-        // Прыжки (рубка)
-        const jumpDirs = [[-2, -2], [-2, 2], [2, -2], [2, 2]];
-        jumpDirs.forEach(([dr, dc]) => {
-            const nr = r + dr, nc = c + dc;
-            const midR = r + dr/2, midC = c + dc/2;
-            if(nr>=0 && nr<8 && nc>=0 && nc<8 && gameState[nr][nc] === 0) {
-                const midPiece = gameState[midR][midC];
-                if(midPiece !== 0 && midPiece !== piece) {
-                    moves.push({r: nr, c: nc, type: 'jump', eat: {r: midR, c: midC}});
+        if(moves.length > 0) return moves; // Если можно бить, нужно бить
+
+        // Обычные ходы
+        dirs.forEach(([dr, dc]) => {
+            let nr = r + dr, nc = c + dc;
+            if(isKing) {
+                while(nr>=0 && nr<8 && nc>=0 && nc<8 && gameState[nr][nc] === 0) {
+                    moves.push({r: nr, c: nc, type: 'step'});
+                    nr += dr; nc += dc;
                 }
+            } else if(nr>=0 && nr<8 && nc>=0 && nc<8 && gameState[nr][nc] === 0) {
+                moves.push({r: nr, c: nc, type: 'step'});
             }
         });
         return moves;
     }
 
     function makeMove(fr, fc, tr, tc) {
-    const moves = getValidMoves(fr, fc);
-    const move = moves.find(m => m.r === tr && m.c === tc);
-    if(!move) return;
-
-    gameState[tr][tc] = gameState[fr][fc];
-    gameState[fr][fc] = 0;
-
-    if(move.type === 'jump') {
-        gameState[move.eat.r][move.eat.c] = 0;
-        // Проверка на возможность съесть еще одну шашку (серия)
-        const nextJumps = getValidMoves(tr, tc).filter(m => m.type === 'jump');
-        if(nextJumps.length > 0) {
-            selected = {r: tr, c: tc};
-            render();
-            return; // Не передаем ход, если можно бить дальше
+        const move = getValidMoves(fr, fc).find(m => m.r === tr && m.c === tc);
+        gameState[tr][tc] = gameState[fr][fc];
+        gameState[fr][fc] = 0;
+        
+        if(move.type === 'jump') {
+            gameState[move.eat.r][move.eat.c] = 0;
+            const nextJumps = getValidMoves(tr, tc).filter(m => m.type === 'jump');
+            if(nextJumps.length > 0) { selected = {r: tr, c: tc}; render(); return; }
         }
+
+        // Превращение в дамку
+        if(gameState[tr][tc] === 2 && tr === 0) gameState[tr][tc] = -2;
+        if(gameState[tr][tc] === 1 && tr === 7) gameState[tr][tc] = -1;
+
+        selected = null;
+        currentTurn = currentTurn === 1 ? 2 : 1;
+        statusEl.innerText = currentTurn === 2 ? "Ход Белых" : "Ход Красных";
+        checkGameOver();
+        render();
+        if(currentTurn === botColor) setTimeout(botMove, 600);
     }
-    function checkWinner() {
-    const redPieces = gameState.flat().filter(p => p === 1 || p === 11).length;
-    const whitePieces = gameState.flat().filter(p => p === 2 || p === 22).length;
 
-    if (redPieces === 0) {
-        alert("ПОЗДРАВЛЯЕМ! Белые победили! 🎉");
-        location.reload(); // Перезагрузка игры
-    } else if (whitePieces === 0) {
-        alert("ИИ победил! Красные выиграли. 🤖");
-        location.reload();
+    function checkGameOver() {
+        const pieces = gameState.flat().filter(p => p !== 0);
+        const red = pieces.filter(p => Math.abs(p) === 1).length;
+        const white = pieces.filter(p => Math.abs(p) === 2).length;
+        if(red === 0) alert("Белые победили!");
+        if(white === 0) alert("Красные победили!");
     }
-}
-    // Проверка на дамку
-    if(gameState[tr][tc] === 2 && tr === 0) gameState[tr][tc] = 22; // Белая дамка
-    if(gameState[tr][tc] === 1 && tr === 7) gameState[tr][tc] = 11; // Красная дамка
-
-    selected = null;
-    checkWinner(); // Проверяем победу после каждого хода
-    currentTurn = currentTurn === 1 ? 2 : 1;
-    statusEl.innerText = currentTurn === 2 ? "Ход Белых" : "Ход Красных";
-    render();
-
-    if(currentTurn === botColor) setTimeout(botMove, 600);
-}
 
     function botMove() {
         let allMoves = [];
-        for(let r=0; r<8; r++) {
-            for(let c=0; c<8; c++) {
-                if(gameState[r][c] === botColor) {
-                    const mvs = getValidMoves(r, c);
-                    mvs.forEach(m => allMoves.push({fr: r, fc: c, ...m}));
-                }
+        for(let r=0; r<8; r++) for(let c=0; c<8; c++) {
+            if(Math.abs(gameState[r][c]) === botColor) {
+                getValidMoves(r, c).forEach(m => allMoves.push({fr: r, fc: c, ...m}));
             }
         }
-
-        if(allMoves.length === 0) return alert("Вы победили!");
-
-        let move;
-        if(difficulty === 1) {
-            move = allMoves[Math.floor(Math.random() * allMoves.length)];
-        } else {
-            // Средний и сложный ИИ: приоритет на рубку
-            const jumps = allMoves.filter(m => m.type === 'jump');
-            move = jumps.length > 0 ? jumps[0] : allMoves[0];
-        }
-        
+        if(allMoves.length === 0) return;
+        const jumps = allMoves.filter(m => m.type === 'jump');
+        const move = jumps.length > 0 ? jumps[0] : allMoves[Math.floor(Math.random()*allMoves.length)];
         makeMove(move.fr, move.fc, move.r, move.c);
     }
 </script>
 </body>
 </html>
-
