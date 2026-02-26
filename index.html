@@ -2,60 +2,176 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Checkers</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Checkers AI</title>
     <style>
-        body { background: #1c1c1c; color: white; text-align: center; font-family: sans-serif; }
-        .board {
-            display: grid;
-            grid-template-columns: repeat(8, 40px);
-            grid-template-rows: repeat(8, 40px);
-            gap: 0;
-            margin: 20px auto;
-            width: 320px;
-            border: 5px solid #333;
-        }
-        .cell { width: 40px; height: 40px; }
-        .black { background-color: #555; }
-        .white { background-color: #eee; }
-        .piece {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            margin: 5px;
-            cursor: pointer;
-        }
-        .red-p { background: red; box-shadow: 0 3px #900; }
-        .white-p { background: white; box-shadow: 0 3px #ccc; }
+        body { background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+        #menu { position: absolute; background: rgba(0,0,0,0.9); width: 100%; height: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .btn { background: #444; color: white; border: 1px solid #666; padding: 15px 30px; margin: 10px; cursor: pointer; border-radius: 8px; width: 200px; font-size: 16px; }
+        .btn:hover { background: #666; }
+        .board { display: grid; grid-template-columns: repeat(8, 11vw); grid-template-rows: repeat(8, 11vw); border: 5px solid #333; }
+        .cell { width: 11vw; height: 11vw; display: flex; align-items: center; justify-content: center; position: relative; }
+        .black-cell { background-color: #444; }
+        .white-cell { background-color: #ccc; }
+        .piece { width: 80%; height: 80%; border-radius: 50%; cursor: pointer; transition: 0.2s; position: relative; z-index: 2; border: 2px solid rgba(0,0,0,0.2); }
+        .white-p { background: #eee; box-shadow: 0 4px #999; }
+        .red-p { background: #f44; box-shadow: 0 4px #800; }
+        .king { border: 4px solid gold !important; }
+        .selected { transform: scale(1.1); outline: 3px solid #0f0; }
+        .highlight { background-color: rgba(0, 255, 0, 0.4) !important; }
     </style>
 </head>
 <body>
-    <h2>Шашки в Telegram</h2>
-    <div class="board" id="board"></div>
 
-    <script>
-        const boardElement = document.getElementById('board');
-        // Отрисовка доски 8x8
-        for (let row = 0; row < 8; row++) {
-            for (let col = 0; col < 8; col++) {
-                const cell = document.createElement('div');
-                cell.className = 'cell ' + ((row + col) % 2 === 0 ? 'white' : 'black');
-                
-                // Расставляем шашки на черные клетки (первые 3 ряда и последние 3)
-                if ((row + col) % 2 !== 0) {
-                    if (row < 3) {
-                        const p = document.createElement('div');
-                        p.className = 'piece red-p';
-                        cell.appendChild(p);
-                    } else if (row > 4) {
-                        const p = document.createElement('div');
-                        p.className = 'piece white-p';
-                        cell.appendChild(p);
-                    }
+<div id="menu">
+    <h2>Настройки игры</h2>
+    <p>Выберите цвет:</p>
+    <button class="btn" onclick="startGame(2)">Я за Белых</button>
+    <button class="btn" onclick="startGame(1)">Я за Красных</button>
+    <p>Сложность ИИ:</p>
+    <select id="diff" class="btn">
+        <option value="1">Легкий</option>
+        <option value="2">Средний</option>
+        <option value="3">Сложный</option>
+    </select>
+</div>
+
+<h2 id="status">Ход Белых</h2>
+<div class="board" id="board"></div>
+
+<script>
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    let playerColor = 2; // 2-белые, 1-красные
+    let botColor = 1;
+    let difficulty = 1;
+    let gameState = [];
+    let selected = null;
+    let currentTurn = 2; 
+
+    function startGame(color) {
+        playerColor = color;
+        botColor = color === 2 ? 1 : 2;
+        difficulty = parseInt(document.getElementById('diff').value);
+        document.getElementById('menu').style.display = 'none';
+        initBoard();
+        if (currentTurn === botColor) setTimeout(botMove, 600);
+    }
+
+    function initBoard() {
+        gameState = Array(8).fill().map(() => Array(8).fill(0));
+        for(let r=0; r<8; r++) {
+            for(let c=0; c<8; c++) {
+                if((r+c)%2 !== 0) {
+                    if(r < 3) gameState[r][c] = 1;
+                    if(r > 4) gameState[r][c] = 2;
                 }
-                boardElement.appendChild(cell);
             }
         }
-    </script>
+        render();
+    }
+
+    function render() {
+        boardEl.innerHTML = '';
+        for(let r=0; r<8; r++) {
+            for(let c=0; c<8; c++) {
+                const cell = document.createElement('div');
+                cell.className = `cell ${(r+c)%2===0 ? 'white-cell' : 'black-cell'}`;
+                
+                if(gameState[r][c] !== 0) {
+                    const p = document.createElement('div');
+                    p.className = `piece ${gameState[r][c] === 1 ? 'red-p' : 'white-p'}`;
+                    if(selected && selected.r === r && selected.c === c) p.classList.add('selected');
+                    p.onclick = () => onPieceClick(r, c);
+                    cell.appendChild(p);
+                }
+
+                if(selected && getValidMoves(selected.r, selected.c).some(m => m.r === r && m.c === c)) {
+                    cell.classList.add('highlight');
+                    cell.onclick = () => makeMove(selected.r, selected.c, r, c);
+                }
+                boardEl.appendChild(cell);
+            }
+        }
+    }
+
+    function onPieceClick(r, c) {
+        if(currentTurn !== playerColor) return;
+        if(gameState[r][c] === playerColor) {
+            selected = {r, c};
+            render();
+        }
+    }
+
+    function getValidMoves(r, c) {
+        const moves = [];
+        const piece = gameState[r][c];
+        const directions = piece === 2 ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]];
+        
+        // Обычные ходы
+        directions.forEach(([dr, dc]) => {
+            const nr = r + dr, nc = c + dc;
+            if(nr>=0 && nr<8 && nc>=0 && nc<8 && gameState[nr][nc] === 0) {
+                moves.push({r: nr, c: nc, type: 'step'});
+            }
+        });
+
+        // Прыжки (рубка)
+        const jumpDirs = [[-2, -2], [-2, 2], [2, -2], [2, 2]];
+        jumpDirs.forEach(([dr, dc]) => {
+            const nr = r + dr, nc = c + dc;
+            const midR = r + dr/2, midC = c + dc/2;
+            if(nr>=0 && nr<8 && nc>=0 && nc<8 && gameState[nr][nc] === 0) {
+                const midPiece = gameState[midR][midC];
+                if(midPiece !== 0 && midPiece !== piece) {
+                    moves.push({r: nr, c: nc, type: 'jump', eat: {r: midR, c: midC}});
+                }
+            }
+        });
+        return moves;
+    }
+
+    function makeMove(fr, fc, tr, tc) {
+        const moves = getValidMoves(fr, fc);
+        const move = moves.find(m => m.r === tr && m.c === tc);
+        if(!move) return;
+
+        gameState[tr][tc] = gameState[fr][fc];
+        gameState[fr][fc] = 0;
+        if(move.type === 'jump') gameState[move.eat.r][move.eat.c] = 0;
+
+        selected = null;
+        currentTurn = currentTurn === 1 ? 2 : 1;
+        statusEl.innerText = currentTurn === 2 ? "Ход Белых" : "Ход Красных";
+        render();
+
+        if(currentTurn === botColor) setTimeout(botMove, 600);
+    }
+
+    function botMove() {
+        let allMoves = [];
+        for(let r=0; r<8; r++) {
+            for(let c=0; c<8; c++) {
+                if(gameState[r][c] === botColor) {
+                    const mvs = getValidMoves(r, c);
+                    mvs.forEach(m => allMoves.push({fr: r, fc: c, ...m}));
+                }
+            }
+        }
+
+        if(allMoves.length === 0) return alert("Вы победили!");
+
+        let move;
+        if(difficulty === 1) {
+            move = allMoves[Math.floor(Math.random() * allMoves.length)];
+        } else {
+            // Средний и сложный ИИ: приоритет на рубку
+            const jumps = allMoves.filter(m => m.type === 'jump');
+            move = jumps.length > 0 ? jumps[0] : allMoves[0];
+        }
+        
+        makeMove(move.fr, move.fc, move.r, move.c);
+    }
+</script>
 </body>
 </html>
