@@ -132,21 +132,47 @@
     }
 
     function makeMove(fr, fc, tr, tc) {
-        const moves = getValidMoves(fr, fc);
-        const move = moves.find(m => m.r === tr && m.c === tc);
-        if(!move) return;
+    const moves = getValidMoves(fr, fc);
+    const move = moves.find(m => m.r === tr && m.c === tc);
+    if(!move) return;
 
-        gameState[tr][tc] = gameState[fr][fc];
-        gameState[fr][fc] = 0;
-        if(move.type === 'jump') gameState[move.eat.r][move.eat.c] = 0;
+    gameState[tr][tc] = gameState[fr][fc];
+    gameState[fr][fc] = 0;
 
-        selected = null;
-        currentTurn = currentTurn === 1 ? 2 : 1;
-        statusEl.innerText = currentTurn === 2 ? "Ход Белых" : "Ход Красных";
-        render();
-
-        if(currentTurn === botColor) setTimeout(botMove, 600);
+    if(move.type === 'jump') {
+        gameState[move.eat.r][move.eat.c] = 0;
+        // Проверка на возможность съесть еще одну шашку (серия)
+        const nextJumps = getValidMoves(tr, tc).filter(m => m.type === 'jump');
+        if(nextJumps.length > 0) {
+            selected = {r: tr, c: tc};
+            render();
+            return; // Не передаем ход, если можно бить дальше
+        }
     }
+    function checkWinner() {
+    const redPieces = gameState.flat().filter(p => p === 1 || p === 11).length;
+    const whitePieces = gameState.flat().filter(p => p === 2 || p === 22).length;
+
+    if (redPieces === 0) {
+        alert("ПОЗДРАВЛЯЕМ! Белые победили! 🎉");
+        location.reload(); // Перезагрузка игры
+    } else if (whitePieces === 0) {
+        alert("ИИ победил! Красные выиграли. 🤖");
+        location.reload();
+    }
+}
+    // Проверка на дамку
+    if(gameState[tr][tc] === 2 && tr === 0) gameState[tr][tc] = 22; // Белая дамка
+    if(gameState[tr][tc] === 1 && tr === 7) gameState[tr][tc] = 11; // Красная дамка
+
+    selected = null;
+    checkWinner(); // Проверяем победу после каждого хода
+    currentTurn = currentTurn === 1 ? 2 : 1;
+    statusEl.innerText = currentTurn === 2 ? "Ход Белых" : "Ход Красных";
+    render();
+
+    if(currentTurn === botColor) setTimeout(botMove, 600);
+}
 
     function botMove() {
         let allMoves = [];
@@ -175,3 +201,4 @@
 </script>
 </body>
 </html>
+
